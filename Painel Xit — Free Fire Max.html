@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Painel Xit - Free Fire Max</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: #0d0d0d;
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    user-select: none;
+    touch-action: pan-x pan-y;
+    overflow: hidden;
+  }
+
+  #bg-demo {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 30% 40%, #1a0000 0%, #0d0d0d 60%);
+    display: flex; align-items: center; justify-content: center;
+    color: #333;
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #hint {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    color: #660000;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  #panel {
+    position: fixed;
+    top: 80px; left: 20px;
+    width: 260px;
+    background: #0f0f0f;
+    border: 1.5px solid #cc0000;
+    border-radius: 10px;
+    box-shadow: 0 0 24px rgba(204,0,0,0.35), 0 0 4px rgba(204,0,0,0.15) inset;
+    z-index: 9999;
+    overflow: hidden;
+    transition: opacity 0.25s, transform 0.25s;
+  }
+
+  #panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.94);
+  }
+
+  #header {
+    background: linear-gradient(90deg, #1a0000 0%, #2a0000 50%, #1a0000 100%);
+    border-bottom: 1.5px solid #cc0000;
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: grab;
+    touch-action: none;
+  }
+  #header:active { cursor: grabbing; }
+
+  #header-left { display: flex; align-items: center; gap: 8px; }
+
+  .skull {
+    width: 22px; height: 22px;
+    fill: #cc0000;
+  }
+
+  #panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ff2222;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255,34,34,0.6);
+  }
+
+  #active-badge {
+    background: #cc0000;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    min-width: 22px;
+    text-align: center;
+  }
+
+  #body { padding: 10px 0 8px; }
+
+  .section {
+    margin: 0 0 2px;
+  }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .section-header:hover { background: #1a0a0a; }
+  .section-header.active { border-left-color: #cc0000; background: #150000; }
+
+  .section-label {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ccc;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .section-label.active { color: #ff4444; }
+
+  .section-icon {
+    width: 18px; height: 18px;
+    opacity: 0.7;
+  }
+  .section-label.active .section-icon { opacity: 1; }
+
+  .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+
+  .toggle {
+    position: relative;
+    width: 36px; height: 20px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: #2a2a2a;
+    border: 1.5px solid #444;
+    border-radius: 20px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .toggle input:checked ~ .toggle-track {
+    background: #cc0000;
+    border-color: #cc0000;
+    box-shadow: 0 0 6px rgba(204,0,0,0.5);
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 12px; height: 12px;
+    background: #666;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked ~ .toggle-track .toggle-thumb {
+    transform: translateX(16px);
+    background: #fff;
+  }
+
+  .chevron {
+    width: 14px; height: 14px;
+    fill: none;
+    stroke: #666;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s, stroke 0.2s;
+  }
+  .open .chevron { transform: rotate(180deg); stroke: #cc0000; }
+
+  .sub-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.25s ease;
+    background: #0a0a0a;
+    border-top: 1px solid #1a0000;
+    border-bottom: 1px solid #1a0000;
+  }
+  .sub-panel.open { max-height: 300px; }
+
+  .sub-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 18px 7px 28px;
+    border-bottom: 1px solid #111;
+  }
+  .sub-row:last-child { border-bottom: none; }
+
+  .sub-label {
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.3px;
+  }
+
+  .slider-wrap { display: flex; align-items: center; gap: 8px; width: 120px; }
+  .slider-val {
+    font-size: 10px;
+    color: #cc0000;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px; height: 3px;
+    background: #2a0000;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    background: #cc0000;
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(204,0,0,0.6);
+  }
+
+  select {
+    background: #1a0000;
+    border: 1px solid #440000;
+    border-radius: 4px;
+    color: #cc0000;
+    font-size: 10px;
+    padding: 3px 6px;
+    outline: none;
+    cursor: pointer;
+    max-width: 100px;
+  }
+
+  .checkbox-wrap { display: flex; align-items: center; gap: 7px; }
+  .chk {
+    width: 14px; height: 14px;
+    accent-color: #cc0000;
+    cursor: pointer;
+  }
+
+  .divider {
+    height: 1px;
+    background: #1a0000;
+    margin: 4px 14px;
+  }
+
+  #footer {
+    padding: 8px 14px 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  #footer-tag {
+    font-size: 9px;
+    color: #440000;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  #panic-btn {
+    background: #1a0000;
+    border: 1px solid #660000;
+    border-radius: 5px;
+    color: #cc0000;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s;
+  }
+  #panic-btn:hover { background: #2a0000; }
+
+  .ripple-dot {
+    width: 6px; height: 6px;
+    background: #cc0000;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(204,0,0,0.7); }
+    50% { opacity: 0.5; box-shadow: 0 0 0 5px rgba(204,0,0,0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-demo">
+  <span style="color:#1a1a1a; font-size:48px; font-weight:900; letter-spacing:8px;">FREE FIRE MAX</span>
+</div>
+
+<div id="hint">toque com 3 dedos para abrir/fechar o painel</div>
+
+<div id="panel">
+  <div id="header" id="drag-handle">
+    <div id="header-left">
+      <svg class="skull" viewBox="0 0 24 24">
+        <path d="M12 3C7.5 3 4 6.5 4 11c0 2.8 1.4 5.3 3.5 6.8V21h9v-3.2C18.6 16.3 20 13.8 20 11c0-4.5-3.5-8-8-8z"/>
+        <circle cx="9" cy="11" r="1.5" fill="#0f0f0f"/>
+        <circle cx="15" cy="11" r="1.5" fill="#0f0f0f"/>
+        <path d="M9.5 18h5M10 20h4" stroke="#0f0f0f" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span id="panel-title">Painel Xit</span>
+    </div>
+    <div id="active-badge">0</div>
+  </div>
+
+  <div id="body">
+
+    <div class="section" id="sec-aimbot">
+      <div class="section-header" onclick="toggleSection('aimbot')">
+        <div class="section-label" id="lbl-aimbot">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+          </svg>
+          Aimbot
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="tog-aimbot" onchange="onToggle('aimbot')">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+          <svg class="chevron" id="chev-aimbot" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="sub-panel" id="sub-aimbot">
+        <div class="sub-row">
+          <span class="sub-label">FOV</span>
+          <div class="slider-wrap">
+            <input type="range" min="10" max="180" value="60" oninput="updateSlider(this,'fov-val')">
+            <span class="slider-val" id="fov-val">60°</span>
+          </div>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Suavização</span>
+          <div class="slider-wrap">
+            <input type="range" min="1" max="10" value="4" oninput="updateSlider(this,'sm-val','')">
+            <span class="slider-val" id="sm-val">4</span>
+          </div>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Velocidade</span>
+          <div class="slider-wrap">
+            <input type="range" min="1" max="20" value="8" oninput="updateSlider(this,'sp-val','')">
+            <span class="slider-val" id="sp-val">8</span>
+          </div>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Osso alvo</span>
+          <select id="sel-bone-aim">
+            <option>Cabeça</option>
+            <option>Pescoço</option>
+            <option>Peito</option>
+            <option>Pelve</option>
+          </select>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Silent Aim</span>
+          <label class="toggle">
+            <input type="checkbox" id="tog-silent">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section" id="sec-esp">
+      <div class="section-header" onclick="toggleSection('esp')">
+        <div class="section-label" id="lbl-esp">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+          ESP
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="tog-esp" onchange="onToggle('esp')">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+          <svg class="chevron" id="chev-esp" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="sub-panel" id="sub-esp">
+        <div class="sub-row">
+          <span class="sub-label">Caixa 2D</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Esqueleto</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Nome</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Distância</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Barra HP</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Linha de pé</span>
+          <label class="toggle"><input type="checkbox" class="esp-opt"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Dist. máxima</span>
+          <div class="slider-wrap">
+            <input type="range" min="50" max="500" step="10" value="200" oninput="updateSlider(this,'dist-val','m')">
+            <span class="slider-val" id="dist-val">200m</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section" id="sec-hs">
+      <div class="section-header" onclick="toggleSection('hs')">
+        <div class="section-label" id="lbl-hs">
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M12 12v4M8 20h8M10 16l2 4 2-4"/>
+          </svg>
+          HS Pescoço
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" id="tog-hs" onchange="onToggle('hs')">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+          </label>
+          <svg class="chevron" id="chev-hs" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="sub-panel" id="sub-hs">
+        <div class="sub-row">
+          <span class="sub-label">Osso</span>
+          <select id="sel-hs-bone">
+            <option>Pescoço</option>
+            <option>Cabeça</option>
+            <option>Cabeça + Pescoço</option>
+          </select>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Auto-Switch</span>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Silent HS</span>
+          <label class="toggle"><input type="checkbox"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">Ajuste vertical</span>
+          <div class="slider-wrap">
+            <input type="range" min="-10" max="10" value="0" oninput="updateSlider(this,'adj-val','')">
+            <span class="slider-val" id="adj-val">0</span>
+          </div>
+        </div>
+        <div class="sub-row">
+          <span class="sub-label">No recoil</span>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="footer">
+    <span id="footer-tag"><span class="ripple-dot"></span>ATIVO</span>
+    <button id="panic-btn" onclick="panicHide()">PANIC [P]</button>
+  </div>
+</div>
+
+<script>
+  const panel = document.getElementById('panel');
+  const badge = document.getElementById('active-badge');
+  const hint  = document.getElementById('hint');
+  let activeCount = 0;
+  let panicMode = false;
+
+  function countActives() {
+    const mains = ['tog-aimbot','tog-esp','tog-hs'];
+    activeCount = mains.filter(id => document.getElementById(id).checked).length;
+    badge.textContent = activeCount;
+    badge.style.background = activeCount > 0 ? '#cc0000' : '#2a2a2a';
+  }
+
+  function onToggle(sec) { countActives(); }
+
+  function toggleSection(sec) {
+    const sub   = document.getElementById('sub-' + sec);
+    const chev  = document.getElementById('chev-' + sec);
+    const lbl   = document.getElementById('lbl-' + sec);
+    const hdr   = sub.previousElementSibling;
+    const isOpen = sub.classList.contains('open');
+    document.querySelectorAll('.sub-panel').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.chevron').forEach(c => c.classList.remove('open'));
+    document.querySelectorAll('.section-header').forEach(h => h.classList.remove('open'));
+    document.querySelectorAll('.section-label').forEach(l => l.classList.remove('active'));
+    if (!isOpen) {
+      sub.classList.add('open');
+      chev.classList.add('open');
+      hdr.classList.add('open');
+      lbl.classList.add('active');
+    }
+  }
+
+  function updateSlider(el, outId, suffix) {
+    const sfx = (suffix === undefined) ? '' : suffix;
+    document.getElementById(outId).textContent = el.value + (outId === 'fov-val' ? '°' : sfx);
+  }
+
+  function panicHide() {
+    panel.classList.add('hidden');
+    panicMode = true;
+    setTimeout(() => { panicMode = false; }, 2000);
+  }
+
+  let panelVisible = true;
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 3) {
+      e.preventDefault();
+      panelVisible = !panelVisible;
+      panel.classList.toggle('hidden', !panelVisible);
+      hint.style.opacity = '0';
+      setTimeout(() => hint.style.opacity = '1', 1500);
+    }
+  }, { passive: false });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'p' || e.key === 'P') panicHide();
+    if (e.key === 'Insert' || e.key === 'Home') {
+      panelVisible = !panelVisible;
+      panel.classList.toggle('hidden', !panelVisible);
+    }
+  });
+
+  let isDragging = false;
+  let dragStartX, dragStartY, panelStartX, panelStartY;
+
+  const header = document.getElementById('header');
+
+  function startDrag(x, y) {
+    isDragging = true;
+    dragStartX = x; dragStartY = y;
+    const r = panel.getBoundingClientRect();
+    panelStartX = r.left; panelStartY = r.top;
+    header.style.cursor = 'grabbing';
+  }
+
+  function moveDrag(x, y) {
+    if (!isDragging) return;
+    const dx = x - dragStartX, dy = y - dragStartY;
+    let nx = panelStartX + dx, ny = panelStartY + dy;
+    const pw = panel.offsetWidth, ph = panel.offsetHeight;
+    nx = Math.max(0, Math.min(window.innerWidth - pw, nx));
+    ny = Math.max(0, Math.min(window.innerHeight - ph, ny));
+    panel.style.left = nx + 'px';
+    panel.style.top  = ny + 'px';
+  }
+
+  function endDrag() {
+    isDragging = false;
+    header.style.cursor = 'grab';
+  }
+
+  header.addEventListener('mousedown',  e => startDrag(e.clientX, e.clientY));
+  document.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  document.addEventListener('mouseup',   endDrag);
+
+  header.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) startDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (isDragging && e.touches.length === 1) moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', endDrag);
+</script>
+
+</body>
+</html>
